@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorías - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/components.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🎯 Tutorías</h1>
+            <div class="nav">
+                <a href="../dashboard.html">Dashboard</a>
+                <a href="asignar.html" id="asignarBtn" style="display: none;">➕ Asignar Tutor</a>
+                <a href="#" id="logoutBtn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="titulo">Tutorías</h2>
+            </div>
+            
+            <div id="loading" class="loading-spinner" style="display: none;"></div>
+            <div id="tutoriasTable" class="table-container"></div>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/tutorias.js"></script>
+    <script>
+        if (!auth.checkAuth()) {
+            utils.redirect('../../index.html');
+        }
+
+        const user = storage.getUser();
+        let filters = {};
+
+        if (auth.isProfesor()) {
+            filters.tutorId = user.id;
+            document.getElementById('titulo').textContent = 'Mis Tutorías';
+        } else if (auth.isEstudiante()) {
+            document.getElementById('titulo').textContent = 'Mis Tutorías';
+        }
+
+        if (auth.isAdmin()) {
+            document.getElementById('asignarBtn').style.display = 'inline-block';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+        });
+
+        async function cargarTutorias() {
+            const loading = document.getElementById('loading');
+            const tableContainer = document.getElementById('tutoriasTable');
+            
+            loading.style.display = 'block';
+            tableContainer.innerHTML = '';
+
+            try {
+                const tutorias = await tutoriasModule.listar(filters);
+                
+                if (tutorias.length === 0) {
+                    tableContainer.innerHTML = '<p>No hay tutorías registradas</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Estudiante</th>
+                                <th>Materia</th>
+                                <th>Fecha</th>
+                                <th>Hora</th>
+                                <th>Tutor</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                tutorias.forEach(tutoria => {
+                    const solicitud = tutoria.solicitud;
+                    html += `
+                        <tr>
+                            <td>${tutoria.id}</td>
+                            <td>${solicitud && solicitud.estudiante ? solicitud.estudiante.nombre : '-'}</td>
+                            <td>${solicitud && solicitud.materia ? solicitud.materia.nombre : '-'}</td>
+                            <td>${solicitud ? utils.formatDate(solicitud.fecha) : '-'}</td>
+                            <td>${solicitud ? `${utils.formatTime(solicitud.horaInicio)} - ${utils.formatTime(solicitud.horaFin)}` : '-'}</td>
+                            <td>${tutoria.tutorAsignado ? tutoria.tutorAsignado.nombre : '-'}</td>
+                            <td><span class="badge badge-${tutoria.estado === 'completada' ? 'success' : tutoria.estado === 'cancelada' ? 'danger' : 'warning'}">${utils.getEstadoName(tutoria.estado)}</span></td>
+                            <td class="table-actions">
+                                <a href="detalle.html?id=${tutoria.id}" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">Ver</a>
+                                ${(auth.isProfesor() || auth.isAdmin()) && tutoria.estado !== 'completada' && tutoria.estado !== 'cancelada' ? `
+                                <button onclick="cambiarEstado(${tutoria.id}, 'en_curso')" class="btn btn-warning" style="padding: 5px 10px; font-size: 12px;">En Curso</button>
+                                <button onclick="cambiarEstado(${tutoria.id}, 'completada')" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Completar</button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                tableContainer.innerHTML = html;
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar tutorías');
+                tableContainer.innerHTML = '<p>Error al cargar tutorías</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function cambiarEstado(id, estado) {
+            try {
+                await tutoriasModule.actualizarEstado(id, estado);
+                utils.showSuccess('Estado actualizado exitosamente');
+                cargarTutorias();
+            } catch (error) {
+                utils.showError(error.message || 'Error al cambiar estado');
+            }
+        }
+
+        cargarTutorias();
+    </script>
+</body>
+</html>

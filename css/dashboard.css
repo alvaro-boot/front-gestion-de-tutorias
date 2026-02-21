@@ -1,0 +1,57 @@
+/* Estilos del Dashboard */
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.card-link .card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+    border-top: 4px solid transparent;
+}
+
+.card-link .card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-top-color: var(--primary-color);
+}
+
+.card-link:nth-child(1) .card {
+    border-top-color: var(--primary-color);
+}
+
+.card-link:nth-child(2) .card {
+    border-top-color: var(--secondary-color);
+}
+
+.card-link:nth-child(3) .card {
+    border-top-color: var(--accent-red);
+}
+
+.card-link:nth-child(4) .card {
+    border-top-color: var(--accent-orange);
+}
+
+.card-link:nth-child(5) .card {
+    border-top-color: var(--accent-yellow);
+}
+
+.card-link:nth-child(6) .card {
+    border-top-color: var(--primary-color);
+}
+
+.card-link h3 {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.card-link p {
+    color: var(--text-muted);
+    font-size: 14px;
+}

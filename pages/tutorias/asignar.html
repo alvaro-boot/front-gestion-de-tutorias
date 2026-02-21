@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asignar Tutor - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🎯 Asignar Tutor</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Asignar Tutor a Solicitud</h2>
+            <form id="asignarForm">
+                <div class="form-group">
+                    <label for="solicitudId">Solicitud *</label>
+                    <select id="solicitudId" name="solicitudId" required>
+                        <option value="">Seleccione una solicitud</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="tipoAsignacion" value="automatico" checked> Asignación Automática
+                    </label>
+                    <label style="margin-left: 20px;">
+                        <input type="radio" name="tipoAsignacion" value="manual"> Asignación Manual
+                    </label>
+                </div>
+
+                <div id="tutorSelectGroup" style="display: none;">
+                    <div class="form-group">
+                        <label for="tutorId">Tutor *</label>
+                        <select id="tutorId" name="tutorId"></select>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Asignar Tutor</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/solicitudes.js"></script>
+    <script src="../../js/modules/usuarios.js"></script>
+    <script src="../../js/modules/tutorias.js"></script>
+    <script>
+        if (!auth.checkAuth() || !auth.isAdmin()) {
+            utils.redirect('../dashboard.html');
+        }
+
+        document.querySelector('input[name="tipoAsignacion"]').addEventListener('change', (e) => {
+            const tutorSelectGroup = document.getElementById('tutorSelectGroup');
+            if (e.target.value === 'manual') {
+                tutorSelectGroup.style.display = 'block';
+                cargarTutores();
+            } else {
+                tutorSelectGroup.style.display = 'none';
+            }
+        });
+
+        async function cargarSolicitudes() {
+            try {
+                const solicitudes = await solicitudesModule.listar({ estado: 'pendiente' });
+                const solicitudSelect = document.getElementById('solicitudId');
+
+                solicitudes.forEach(solicitud => {
+                    const option = document.createElement('option');
+                    option.value = solicitud.id;
+                    option.textContent = `Solicitud ${solicitud.id} - ${solicitud.materia ? solicitud.materia.nombre : ''} - ${utils.formatDate(solicitud.fecha)}`;
+                    solicitudSelect.appendChild(option);
+                });
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar solicitudes');
+            }
+        }
+
+        async function cargarTutores() {
+            try {
+                const usuarios = await usuariosModule.listar();
+                const profesores = usuarios.filter(u => 
+                    u.usuarioRoles && u.usuarioRoles.some(ur => ur.rol.nombre === 'profesor')
+                );
+                
+                const tutorSelect = document.getElementById('tutorId');
+                tutorSelect.innerHTML = '<option value="">Seleccione un tutor</option>';
+
+                profesores.forEach(profesor => {
+                    const option = document.createElement('option');
+                    option.value = profesor.id;
+                    option.textContent = `${profesor.nombre} (${profesor.correo})`;
+                    tutorSelect.appendChild(option);
+                });
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar tutores');
+            }
+        }
+
+        document.getElementById('asignarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const solicitudId = BigInt(document.getElementById('solicitudId').value);
+            const tipoAsignacion = document.querySelector('input[name="tipoAsignacion"]:checked').value;
+
+            try {
+                if (tipoAsignacion === 'automatico') {
+                    await tutoriasModule.asignarAutomatico(solicitudId);
+                } else {
+                    const tutorId = BigInt(document.getElementById('tutorId').value);
+                    await tutoriasModule.asignarManual(solicitudId, tutorId);
+                }
+                utils.showSuccess('Tutor asignado exitosamente');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 1000);
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al asignar tutor';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        cargarSolicitudes();
+    </script>
+</body>
+</html>

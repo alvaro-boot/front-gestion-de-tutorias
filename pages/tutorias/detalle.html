@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle Tutoría - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📄 Detalle de Tutoría</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div id="loading" class="loading-spinner"></div>
+            <div id="tutoriaDetail" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/tutorias.js"></script>
+    <script>
+        if (!auth.checkAuth()) {
+            utils.redirect('../../index.html');
+        }
+
+        const tutoriaId = utils.getUrlParam('id');
+        if (!tutoriaId) {
+            utils.redirect('listar.html');
+        }
+
+        async function cargarTutoria() {
+            try {
+                const tutoria = await tutoriasModule.obtener(tutoriaId);
+                const solicitud = tutoria.solicitud;
+                
+                const detailDiv = document.getElementById('tutoriaDetail');
+                detailDiv.innerHTML = `
+                    <h2>Información de la Tutoría</h2>
+                    <div style="margin-top: 20px;">
+                        <p><strong>ID:</strong> ${tutoria.id}</p>
+                        <p><strong>Estado:</strong> <span class="badge badge-${tutoria.estado === 'completada' ? 'success' : tutoria.estado === 'cancelada' ? 'danger' : 'warning'}">${utils.getEstadoName(tutoria.estado)}</span></p>
+                        ${solicitud ? `
+                            <h3 style="margin-top: 20px;">Información de la Solicitud</h3>
+                            <p><strong>Estudiante:</strong> ${solicitud.estudiante ? solicitud.estudiante.nombre : '-'}</p>
+                            <p><strong>Materia:</strong> ${solicitud.materia ? `${solicitud.materia.nombre} (${solicitud.materia.codigo})` : '-'}</p>
+                            <p><strong>Fecha:</strong> ${utils.formatDate(solicitud.fecha)}</p>
+                            <p><strong>Hora:</strong> ${utils.formatTime(solicitud.horaInicio)} - ${utils.formatTime(solicitud.horaFin)}</p>
+                        ` : ''}
+                        <h3 style="margin-top: 20px;">Tutor Asignado</h3>
+                        <p><strong>Nombre:</strong> ${tutoria.tutorAsignado ? tutoria.tutorAsignado.nombre : '-'}</p>
+                        <p><strong>Correo:</strong> ${tutoria.tutorAsignado ? tutoria.tutorAsignado.correo : '-'}</p>
+                    </div>
+                `;
+                
+                document.getElementById('loading').style.display = 'none';
+                detailDiv.style.display = 'block';
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar tutoría');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 2000);
+            }
+        }
+
+        cargarTutoria();
+    </script>
+</body>
+</html>

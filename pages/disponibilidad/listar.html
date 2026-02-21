@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disponibilidad - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/components.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>⏰ Disponibilidad</h1>
+            <div class="nav">
+                <a href="../dashboard.html">Dashboard</a>
+                <a href="crear.html" id="crearBtn" style="display: none;">➕ Nueva Disponibilidad</a>
+                <a href="#" id="logoutBtn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="titulo">Disponibilidades</h2>
+            </div>
+            
+            <div id="loading" class="loading-spinner" style="display: none;"></div>
+            <div id="disponibilidadesTable" class="table-container"></div>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/disponibilidad.js"></script>
+    <script>
+        if (!auth.checkAuth()) {
+            utils.redirect('../../index.html');
+        }
+
+        const user = storage.getUser();
+        let usuarioId = null;
+
+        if (auth.isProfesor()) {
+            usuarioId = user.id;
+            document.getElementById('titulo').textContent = 'Mi Disponibilidad';
+            document.getElementById('crearBtn').style.display = 'inline-block';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+        });
+
+        async function cargarDisponibilidades() {
+            const loading = document.getElementById('loading');
+            const tableContainer = document.getElementById('disponibilidadesTable');
+            
+            loading.style.display = 'block';
+            tableContainer.innerHTML = '';
+
+            try {
+                const disponibilidades = await disponibilidadModule.listar(usuarioId);
+                
+                if (disponibilidades.length === 0) {
+                    tableContainer.innerHTML = '<p>No hay disponibilidades registradas</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Día</th>
+                                <th>Hora Inicio</th>
+                                <th>Hora Fin</th>
+                                ${auth.isProfesor() || auth.isAdmin() ? '<th>Acciones</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                disponibilidades.forEach(disp => {
+                    html += `
+                        <tr>
+                            <td>${utils.capitalize(disp.diaSemana)}</td>
+                            <td>${utils.formatTime(disp.horaInicio)}</td>
+                            <td>${utils.formatTime(disp.horaFin)}</td>
+                            ${auth.isProfesor() || auth.isAdmin() ? `
+                            <td class="table-actions">
+                                <button onclick="eliminarDisponibilidad(${disp.id})" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Eliminar</button>
+                            </td>
+                            ` : ''}
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                tableContainer.innerHTML = html;
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar disponibilidades');
+                tableContainer.innerHTML = '<p>Error al cargar disponibilidades</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function eliminarDisponibilidad(id) {
+            if (!utils.confirm('¿Está seguro de eliminar esta disponibilidad?')) return;
+
+            try {
+                await disponibilidadModule.eliminar(id);
+                utils.showSuccess('Disponibilidad eliminada exitosamente');
+                cargarDisponibilidades();
+            } catch (error) {
+                utils.showError(error.message || 'Error al eliminar disponibilidad');
+            }
+        }
+
+        cargarDisponibilidades();
+    </script>
+</body>
+</html>

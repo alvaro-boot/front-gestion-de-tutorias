@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="../css/components.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🏛️ Gestión de Tutorías - Universidad Tecnológica</h1>
+            <div class="nav">
+                <span id="userInfo" style="color: white; padding: 8px 15px; background-color: rgba(255, 255, 255, 0.1); border-radius: 5px;"></span>
+                <a href="#" id="logoutBtn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="adminNav" style="display: none;">
+            <h2 style="background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; margin-bottom: 20px;">Panel de Administración</h2>
+            <div class="grid grid-3">
+                <a href="usuarios/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>👥 Usuarios</h3>
+                        <p>Gestionar usuarios del sistema</p>
+                    </div>
+                </a>
+                <a href="materias/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>📚 Materias</h3>
+                        <p>Gestionar materias</p>
+                    </div>
+                </a>
+                <a href="especialidades/gestionar.html" class="card-link">
+                    <div class="card">
+                        <h3>🎓 Especialidades</h3>
+                        <p>Asignar especialidades</p>
+                    </div>
+                </a>
+                <a href="solicitudes/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>📝 Solicitudes</h3>
+                        <p>Ver todas las solicitudes</p>
+                    </div>
+                </a>
+                <a href="tutorias/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>🎯 Tutorías</h3>
+                        <p>Gestionar tutorías</p>
+                    </div>
+                </a>
+                <a href="disponibilidad/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>⏰ Disponibilidad</h3>
+                        <p>Ver disponibilidad</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div id="profesorNav" style="display: none;">
+            <h2 style="background: var(--gradient-secondary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; margin-bottom: 20px;">Panel del Profesor</h2>
+            <div class="grid grid-3">
+                <a href="disponibilidad/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>⏰ Mi Disponibilidad</h3>
+                        <p>Gestionar horarios disponibles</p>
+                    </div>
+                </a>
+                <a href="tutorias/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>🎯 Mis Tutorías</h3>
+                        <p>Ver tutorías asignadas</p>
+                    </div>
+                </a>
+                <a href="#" id="profileBtn" class="card-link">
+                    <div class="card">
+                        <h3>👤 Mi Perfil</h3>
+                        <p>Ver y editar perfil</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div id="estudianteNav" style="display: none;">
+            <h2 style="background: var(--gradient-accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; margin-bottom: 20px;">Panel del Estudiante</h2>
+            <div class="grid grid-3">
+                <a href="solicitudes/crear.html" class="card-link">
+                    <div class="card">
+                        <h3>➕ Nueva Solicitud</h3>
+                        <p>Crear solicitud de tutoría</p>
+                    </div>
+                </a>
+                <a href="solicitudes/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>📝 Mis Solicitudes</h3>
+                        <p>Ver mis solicitudes</p>
+                    </div>
+                </a>
+                <a href="tutorias/listar.html" class="card-link">
+                    <div class="card">
+                        <h3>🎯 Mis Tutorías</h3>
+                        <p>Ver tutorías asignadas</p>
+                    </div>
+                </a>
+                <a href="#" id="profileBtnEst" class="card-link">
+                    <div class="card">
+                        <h3>👤 Mi Perfil</h3>
+                        <p>Ver y editar perfil</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div id="statsSection" style="display: none;">
+            <h2 style="background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; margin-bottom: 20px;">Estadísticas</h2>
+            <div class="grid grid-3" id="statsGrid"></div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/storage.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        // Esperar a que el DOM esté completamente cargado
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Verificar autenticación
+                if (!auth.checkAuth()) {
+                    return;
+                }
+
+                const user = storage.getUser();
+                if (!user) {
+                    console.error('Usuario no encontrado en storage');
+                    auth.logout();
+                    return;
+                }
+
+                // Mostrar información del usuario
+                const userInfo = document.getElementById('userInfo');
+                if (userInfo) {
+                    const roles = user.roles && Array.isArray(user.roles) ? user.roles.join(', ') : 'Sin rol';
+                    userInfo.textContent = `${user.nombre || 'Usuario'} (${roles})`;
+                }
+
+                // Mostrar navegación según rol
+                let navShown = false;
+                if (auth.isAdmin()) {
+                    const adminNav = document.getElementById('adminNav');
+                    const statsSection = document.getElementById('statsSection');
+                    if (adminNav) adminNav.style.display = 'block';
+                    if (statsSection) statsSection.style.display = 'block';
+                    navShown = true;
+                    loadStats();
+                } else if (auth.isProfesor()) {
+                    const profesorNav = document.getElementById('profesorNav');
+                    if (profesorNav) profesorNav.style.display = 'block';
+                    navShown = true;
+                } else if (auth.isEstudiante()) {
+                    const estudianteNav = document.getElementById('estudianteNav');
+                    if (estudianteNav) estudianteNav.style.display = 'block';
+                    navShown = true;
+                }
+
+                // Si no se mostró ninguna navegación, mostrar mensaje
+                if (!navShown) {
+                    const container = document.querySelector('.container');
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 40px;">
+                                <h2 style="color: #dc143c; margin-bottom: 20px;">⚠️ Error de Permisos</h2>
+                                <p style="color: #666; margin-bottom: 20px;">No se pudo determinar tu rol en el sistema.</p>
+                                <p style="color: #666;">Por favor, contacta al administrador.</p>
+                                <button onclick="auth.logout()" style="margin-top: 20px; padding: 10px 20px; background: var(--color-primary); color: white; border: none; border-radius: 5px; cursor: pointer;">
+                                    Cerrar Sesión
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Logout
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        auth.logout();
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error inicializando dashboard:', error);
+                utils.showError('Error al cargar el dashboard. Por favor, recarga la página.');
+            }
+        });
+
+        // Cargar estadísticas (solo admin)
+        async function loadStats() {
+            try {
+                const statsGrid = document.getElementById('statsGrid');
+                if (!statsGrid) return;
+
+                // Mostrar loading
+                statsGrid.innerHTML = '<div style="text-align: center; padding: 20px;">Cargando estadísticas...</div>';
+
+                const [usuarios, materias, solicitudes, tutorias] = await Promise.all([
+                    api.get('/usuarios').catch(() => []),
+                    api.get('/materias').catch(() => []),
+                    api.get('/solicitudes').catch(() => []),
+                    api.get('/tutorias').catch(() => [])
+                ]);
+
+                statsGrid.innerHTML = `
+                    <div class="stats-card">
+                        <h3>${usuarios && Array.isArray(usuarios) ? usuarios.length : 0}</h3>
+                        <p>Usuarios</p>
+                    </div>
+                    <div class="stats-card">
+                        <h3>${materias && Array.isArray(materias) ? materias.length : 0}</h3>
+                        <p>Materias</p>
+                    </div>
+                    <div class="stats-card">
+                        <h3>${solicitudes && Array.isArray(solicitudes) ? solicitudes.length : 0}</h3>
+                        <p>Solicitudes</p>
+                    </div>
+                    <div class="stats-card">
+                        <h3>${tutorias && Array.isArray(tutorias) ? tutorias.length : 0}</h3>
+                        <p>Tutorías</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+                const statsGrid = document.getElementById('statsGrid');
+                if (statsGrid) {
+                    statsGrid.innerHTML = '<div style="text-align: center; padding: 20px; color: #dc143c;">Error al cargar estadísticas</div>';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

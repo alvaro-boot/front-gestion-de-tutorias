@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Materia - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>✏️ Editar Materia</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Editar Materia</h2>
+            <div id="loading" class="loading-spinner"></div>
+            <form id="materiaForm" style="display: none;">
+                <div class="form-group">
+                    <label for="nombre">Nombre *</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="codigo">Código *</label>
+                    <input type="text" id="codigo" name="codigo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Estado</label>
+                    <select id="estado" name="estado">
+                        <option value="activa">Activa</option>
+                        <option value="inactiva">Inactiva</option>
+                    </select>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Actualizar Materia</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/materias.js"></script>
+    <script>
+        if (!auth.checkAuth() || !auth.isAdmin()) {
+            utils.redirect('../dashboard.html');
+        }
+
+        const materiaId = utils.getUrlParam('id');
+        if (!materiaId) {
+            utils.redirect('listar.html');
+        }
+
+        async function cargarMateria() {
+            try {
+                const materia = await materiasModule.obtener(materiaId);
+                
+                document.getElementById('nombre').value = materia.nombre || '';
+                document.getElementById('codigo').value = materia.codigo || '';
+                document.getElementById('estado').value = materia.estado || 'activa';
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('materiaForm').style.display = 'block';
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar materia');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 2000);
+            }
+        }
+
+        document.getElementById('materiaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const nombre = document.getElementById('nombre').value;
+            const codigo = document.getElementById('codigo').value;
+            const estado = document.getElementById('estado').value;
+
+            try {
+                await materiasModule.actualizar(materiaId, { nombre, codigo, estado });
+                utils.showSuccess('Materia actualizada exitosamente');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 1000);
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al actualizar materia';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        cargarMateria();
+    </script>
+</body>
+</html>

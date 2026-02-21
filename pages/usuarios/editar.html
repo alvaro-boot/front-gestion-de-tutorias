@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Usuario - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>✏️ Editar Usuario</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Editar Usuario</h2>
+            <div id="loading" class="loading-spinner"></div>
+            <form id="usuarioForm" style="display: none;">
+                <div class="form-group">
+                    <label for="nombre">Nombre *</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="correo">Correo Electrónico *</label>
+                    <input type="email" id="correo" name="correo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Estado</label>
+                    <select id="estado" name="estado">
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Actualizar Usuario</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/usuarios.js"></script>
+    <script>
+        if (!auth.checkAuth() || !auth.isAdmin()) {
+            utils.redirect('../dashboard.html');
+        }
+
+        const usuarioId = utils.getUrlParam('id');
+        if (!usuarioId) {
+            utils.redirect('listar.html');
+        }
+
+        async function cargarUsuario() {
+            try {
+                const usuario = await usuariosModule.obtener(usuarioId);
+                
+                document.getElementById('nombre').value = usuario.nombre || '';
+                document.getElementById('correo').value = usuario.correo || '';
+                document.getElementById('estado').value = usuario.estado || 'activo';
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('usuarioForm').style.display = 'block';
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar usuario');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 2000);
+            }
+        }
+
+        document.getElementById('usuarioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const nombre = document.getElementById('nombre').value;
+            const correo = document.getElementById('correo').value;
+            const estado = document.getElementById('estado').value;
+
+            if (!utils.validateEmail(correo)) {
+                errorMessage.textContent = 'Correo electrónico inválido';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                await usuariosModule.actualizar(usuarioId, {
+                    nombre,
+                    correo,
+                    estado
+                });
+                utils.showSuccess('Usuario actualizado exitosamente');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 1000);
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al actualizar usuario';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        cargarUsuario();
+    </script>
+</body>
+</html>

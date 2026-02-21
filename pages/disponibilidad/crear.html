@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Disponibilidad - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>➕ Crear Disponibilidad</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Nueva Disponibilidad</h2>
+            <form id="disponibilidadForm">
+                <div class="form-group">
+                    <label for="diaSemana">Día de la Semana *</label>
+                    <select id="diaSemana" name="diaSemana" required>
+                        <option value="">Seleccione un día</option>
+                        <option value="lunes">Lunes</option>
+                        <option value="martes">Martes</option>
+                        <option value="miércoles">Miércoles</option>
+                        <option value="jueves">Jueves</option>
+                        <option value="viernes">Viernes</option>
+                        <option value="sábado">Sábado</option>
+                        <option value="domingo">Domingo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="horaInicio">Hora de Inicio * (HH:mm)</label>
+                    <input type="time" id="horaInicio" name="horaInicio" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="horaFin">Hora de Fin * (HH:mm)</label>
+                    <input type="time" id="horaFin" name="horaFin" required>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Crear Disponibilidad</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/disponibilidad.js"></script>
+    <script>
+        if (!auth.checkAuth() || (!auth.isProfesor() && !auth.isAdmin())) {
+            utils.redirect('../dashboard.html');
+        }
+
+        const user = storage.getUser();
+
+        document.getElementById('disponibilidadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const diaSemana = document.getElementById('diaSemana').value;
+            const horaInicio = document.getElementById('horaInicio').value;
+            const horaFin = document.getElementById('horaFin').value;
+
+            if (!utils.validateTime(horaInicio) || !utils.validateTime(horaFin)) {
+                errorMessage.textContent = 'Formato de hora inválido (debe ser HH:mm)';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            if (horaInicio >= horaFin) {
+                errorMessage.textContent = 'La hora de inicio debe ser menor que la hora de fin';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                await disponibilidadModule.crear({
+                    usuarioId: BigInt(user.id),
+                    diaSemana,
+                    horaInicio,
+                    horaFin
+                });
+                utils.showSuccess('Disponibilidad creada exitosamente');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 1000);
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al crear disponibilidad';
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

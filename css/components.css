@@ -1,0 +1,52 @@
+/* Estilos de Componentes Adicionales */
+
+/* Mejoras para tablas */
+.table-container {
+    margin-top: 20px;
+}
+
+/* Botones de acción */
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #5a7a1d;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(107, 142, 35, 0.3);
+}
+
+/* Mejoras de formularios */
+.form-group input[type="checkbox"],
+.form-group input[type="radio"] {
+    width: auto;
+    margin-right: 5px;
+}
+
+.form-group label input[type="checkbox"],
+.form-group label input[type="radio"] {
+    margin-right: 8px;
+}
+
+/* Espaciado mejorado */
+.card h2 {
+    margin-bottom: 20px;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    font-size: 24px;
+}
+
+/* Mejoras responsive para tablas */
+@media (max-width: 768px) {
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 600px;
+    }
+}

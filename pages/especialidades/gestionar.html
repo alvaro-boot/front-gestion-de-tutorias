@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Especialidades - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/components.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🎓 Gestionar Especialidades</h1>
+            <div class="nav">
+                <a href="../dashboard.html">Dashboard</a>
+                <a href="#" id="logoutBtn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Asignar Especialidad a Profesor</h2>
+            <form id="especialidadForm">
+                <div class="form-group">
+                    <label for="usuarioId">Profesor *</label>
+                    <select id="usuarioId" name="usuarioId" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="materiaId">Materia *</label>
+                    <select id="materiaId" name="materiaId" required></select>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <button type="submit" class="btn btn-primary">Asignar Especialidad</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Especialidades Asignadas</h2>
+            <div id="loading" class="loading-spinner" style="display: none;"></div>
+            <div id="especialidadesTable" class="table-container"></div>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/usuarios.js"></script>
+    <script src="../../js/modules/materias.js"></script>
+    <script src="../../js/modules/especialidades.js"></script>
+    <script>
+        if (!auth.checkAuth() || !auth.isAdmin()) {
+            utils.redirect('../dashboard.html');
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+        });
+
+        async function cargarSelects() {
+            try {
+                const [usuarios, materias] = await Promise.all([
+                    usuariosModule.listar(),
+                    materiasModule.listar()
+                ]);
+
+                const usuarioSelect = document.getElementById('usuarioId');
+                const materiaSelect = document.getElementById('materiaId');
+
+                // Filtrar solo profesores
+                const profesores = usuarios.filter(u => 
+                    u.usuarioRoles && u.usuarioRoles.some(ur => ur.rol.nombre === 'profesor')
+                );
+
+                profesores.forEach(profesor => {
+                    const option = document.createElement('option');
+                    option.value = profesor.id;
+                    option.textContent = `${profesor.nombre} (${profesor.correo})`;
+                    usuarioSelect.appendChild(option);
+                });
+
+                materias.forEach(materia => {
+                    const option = document.createElement('option');
+                    option.value = materia.id;
+                    option.textContent = `${materia.nombre} (${materia.codigo})`;
+                    materiaSelect.appendChild(option);
+                });
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar datos');
+            }
+        }
+
+        async function cargarEspecialidades() {
+            const loading = document.getElementById('loading');
+            const tableContainer = document.getElementById('especialidadesTable');
+            
+            loading.style.display = 'block';
+            tableContainer.innerHTML = '';
+
+            try {
+                const especialidades = await especialidadesModule.listar();
+                
+                if (especialidades.length === 0) {
+                    tableContainer.innerHTML = '<p>No hay especialidades asignadas</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Profesor</th>
+                                <th>Materia</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                especialidades.forEach(esp => {
+                    html += `
+                        <tr>
+                            <td>${esp.usuario ? esp.usuario.nombre : '-'}</td>
+                            <td>${esp.materia ? `${esp.materia.nombre} (${esp.materia.codigo})` : '-'}</td>
+                            <td class="table-actions">
+                                <button onclick="eliminarEspecialidad(${esp.id})" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                tableContainer.innerHTML = html;
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar especialidades');
+                tableContainer.innerHTML = '<p>Error al cargar especialidades</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        document.getElementById('especialidadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const usuarioId = BigInt(document.getElementById('usuarioId').value);
+            const materiaId = BigInt(document.getElementById('materiaId').value);
+
+            try {
+                await especialidadesModule.crear({ usuarioId, materiaId });
+                utils.showSuccess('Especialidad asignada exitosamente');
+                document.getElementById('especialidadForm').reset();
+                cargarEspecialidades();
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al asignar especialidad';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        async function eliminarEspecialidad(id) {
+            if (!utils.confirm('¿Está seguro de eliminar esta especialidad?')) return;
+
+            try {
+                await especialidadesModule.eliminar(id);
+                utils.showSuccess('Especialidad eliminada exitosamente');
+                cargarEspecialidades();
+            } catch (error) {
+                utils.showError(error.message || 'Error al eliminar especialidad');
+            }
+        }
+
+        cargarSelects();
+        cargarEspecialidades();
+    </script>
+</body>
+</html>

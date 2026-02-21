@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Usuario - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>➕ Crear Usuario</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Nuevo Usuario</h2>
+            <form id="usuarioForm">
+                <div class="form-group">
+                    <label for="nombre">Nombre *</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="correo">Correo Electrónico *</label>
+                    <input type="email" id="correo" name="correo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contraseña">Contraseña (opcional, se genera automáticamente si no se proporciona)</label>
+                    <input type="password" id="contraseña" name="contraseña">
+                </div>
+
+                <div class="form-group">
+                    <label for="estado">Estado</label>
+                    <select id="estado" name="estado">
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Roles *</label>
+                    <div>
+                        <label style="display: inline-block; margin-right: 20px;">
+                            <input type="checkbox" name="roles" value="profesor"> Profesor
+                        </label>
+                        <label style="display: inline-block;">
+                            <input type="checkbox" name="roles" value="estudiante"> Estudiante
+                        </label>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Crear Usuario</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/usuarios.js"></script>
+    <script>
+        if (!auth.checkAuth() || !auth.isAdmin()) {
+            utils.redirect('../dashboard.html');
+        }
+
+        document.getElementById('usuarioForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+
+            const nombre = document.getElementById('nombre').value;
+            const correo = document.getElementById('correo').value;
+            const contraseña = document.getElementById('contraseña').value;
+            const estado = document.getElementById('estado').value;
+            
+            const rolesCheckboxes = document.querySelectorAll('input[name="roles"]:checked');
+            const roles = Array.from(rolesCheckboxes).map(cb => cb.value);
+
+            if (roles.length === 0) {
+                errorMessage.textContent = 'Debe seleccionar al menos un rol';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            if (!utils.validateEmail(correo)) {
+                errorMessage.textContent = 'Correo electrónico inválido';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                const data = {
+                    nombre,
+                    correo,
+                    estado,
+                    roles
+                };
+
+                if (contraseña) {
+                    data.contraseña = contraseña;
+                }
+
+                await usuariosModule.crear(data);
+                utils.showSuccess('Usuario creado exitosamente');
+                setTimeout(() => {
+                    window.location.href = 'listar.html';
+                }, 1000);
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Error al crear usuario';
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

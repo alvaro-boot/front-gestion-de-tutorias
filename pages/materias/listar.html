@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Materias - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/components.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📚 Gestión de Materias</h1>
+            <div class="nav">
+                <a href="../dashboard.html">Dashboard</a>
+                <a href="#" id="logoutBtn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Lista de Materias</h2>
+                <a href="crear.html" class="btn btn-primary" id="crearBtn" style="display: none;">➕ Nueva Materia</a>
+            </div>
+            
+            <div id="loading" class="loading-spinner" style="display: none;"></div>
+            <div id="materiasTable" class="table-container"></div>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/materias.js"></script>
+    <script>
+        if (!auth.checkAuth()) {
+            utils.redirect('../../index.html');
+        }
+
+        if (auth.isAdmin()) {
+            document.getElementById('crearBtn').style.display = 'block';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.logout();
+        });
+
+        async function cargarMaterias() {
+            const loading = document.getElementById('loading');
+            const tableContainer = document.getElementById('materiasTable');
+            
+            loading.style.display = 'block';
+            tableContainer.innerHTML = '';
+
+            try {
+                const materias = await materiasModule.listar();
+                
+                if (materias.length === 0) {
+                    tableContainer.innerHTML = '<p>No hay materias registradas</p>';
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Código</th>
+                                <th>Estado</th>
+                                <th id="accionesHeader" style="display: none;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                materias.forEach(materia => {
+                    html += `
+                        <tr>
+                            <td>${materia.id}</td>
+                            <td>${materia.nombre}</td>
+                            <td>${materia.codigo}</td>
+                            <td><span class="badge ${materia.estado === 'activa' ? 'badge-success' : 'badge-warning'}">${utils.getEstadoName(materia.estado)}</span></td>
+                            <td class="table-actions" id="accionesCell" style="display: none;">
+                                <a href="editar.html?id=${materia.id}" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">Editar</a>
+                                <button onclick="eliminarMateria(${materia.id})" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                tableContainer.innerHTML = html;
+
+                if (auth.isAdmin()) {
+                    document.getElementById('accionesHeader').style.display = 'table-cell';
+                    document.querySelectorAll('#accionesCell').forEach(cell => {
+                        cell.style.display = 'table-cell';
+                    });
+                }
+            } catch (error) {
+                utils.showError(error.message || 'Error al cargar materias');
+                tableContainer.innerHTML = '<p>Error al cargar materias</p>';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function eliminarMateria(id) {
+            if (!utils.confirm('¿Está seguro de eliminar esta materia?')) return;
+
+            try {
+                await materiasModule.eliminar(id);
+                utils.showSuccess('Materia eliminada exitosamente');
+                cargarMaterias();
+            } catch (error) {
+                utils.showError(error.message || 'Error al eliminar materia');
+            }
+        }
+
+        cargarMaterias();
+    </script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Solicitud - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>➕ Crear Solicitud de Tutoría</h1>
+            <div class="nav">
+                <a href="listar.html">← Volver</a>
+                <a href="../dashboard.html">Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Nueva Solicitud</h2>
+            <form id="solicitudForm">
+                <div class="form-group">
+                    <label for="materiaId">Materia *</label>
+                    <select id="materiaId" name="materiaId" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Fecha *</label>
+                    <input type="date" id="fecha" name="fecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="horaInicio">Hora de Inicio * (HH:mm)</label>
+                    <input type="time" id="horaInicio" name="horaInicio" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="horaFin">Hora de Fin * (HH:mm)</label>
+                    <input type="time" id="horaFin" name="horaFin" required>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Crear Solicitud</button>
+                    <a href="listar.html" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../js/api.js"></script>
+    <script src="../../js/storage.js"></script>
+    <script src="../../js/utils.js"></script>
+    <script src="../../js/auth.js"></script>
+    <script src="../../js/modules/materias.js"></script>
+    <script src="../../js/modules/solicitudes.js"></script>
+    <script>
+        // Esperar a que el DOM esté cargado
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Verificar autenticación y rol
+            if (!auth.checkAuth() || !auth.isEstudiante()) {
+                utils.redirect('../dashboard.html');
+                return;
+            }
+
+            const user = storage.getUser();
+            if (!user) {
+                utils.showError('Usuario no encontrado');
+                auth.logout();
+                return;
+            }
+
+            const submitBtn = document.getElementById('solicitudForm').querySelector('button[type="submit"]');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Cargar materias
+            async function cargarMaterias() {
+                try {
+                    const materias = await materiasModule.listar();
+                    const materiaSelect = document.getElementById('materiaId');
+                    
+                    if (!materias || materias.length === 0) {
+                        materiaSelect.innerHTML = '<option value="">No hay materias disponibles</option>';
+                        materiaSelect.disabled = true;
+                        errorMessage.textContent = 'No hay materias disponibles. Contacta al administrador.';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    materiaSelect.innerHTML = '<option value="">Seleccione una materia</option>';
+                    materias.forEach(materia => {
+                        const option = document.createElement('option');
+                        option.value = materia.id.toString();
+                        option.textContent = `${materia.nombre} (${materia.codigo})`;
+                        materiaSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error cargando materias:', error);
+                    utils.showError(error.message || 'Error al cargar materias');
+                    errorMessage.textContent = 'Error al cargar materias. Por favor, recarga la página.';
+                    errorMessage.style.display = 'block';
+                }
+            }
+
+            // Establecer fecha mínima como hoy
+            const fechaInput = document.getElementById('fecha');
+            fechaInput.min = new Date().toISOString().split('T')[0];
+
+            // Manejar envío del formulario
+            document.getElementById('solicitudForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                errorMessage.style.display = 'none';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creando...';
+
+                const materiaId = document.getElementById('materiaId').value;
+                const fecha = fechaInput.value;
+                const horaInicio = document.getElementById('horaInicio').value;
+                const horaFin = document.getElementById('horaFin').value;
+
+                // Validaciones
+                if (!materiaId) {
+                    errorMessage.textContent = 'Por favor seleccione una materia';
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Solicitud';
+                    return;
+                }
+
+                if (!fecha) {
+                    errorMessage.textContent = 'Por favor seleccione una fecha';
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Solicitud';
+                    return;
+                }
+
+                if (!horaInicio || !horaFin) {
+                    errorMessage.textContent = 'Por favor complete las horas de inicio y fin';
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Solicitud';
+                    return;
+                }
+
+                if (horaInicio >= horaFin) {
+                    errorMessage.textContent = 'La hora de inicio debe ser menor que la hora de fin';
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Solicitud';
+                    return;
+                }
+
+                try {
+                    // El backend usa el ID del usuario autenticado automáticamente
+                    await solicitudesModule.crear({
+                        materiaId: materiaId,
+                        fecha,
+                        horaInicio,
+                        horaFin
+                    });
+                    utils.showSuccess('Solicitud creada exitosamente');
+                    setTimeout(() => {
+                        window.location.href = 'listar.html';
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error creando solicitud:', error);
+                    let errorMsg = 'Error al crear solicitud';
+                    if (error.message) {
+                        errorMsg = error.message;
+                    } else if (error.data && error.data.message) {
+                        errorMsg = error.data.message;
+                    } else if (error.data && typeof error.data === 'string') {
+                        errorMsg = error.data;
+                    }
+                    errorMessage.textContent = errorMsg;
+                    errorMessage.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Crear Solicitud';
+                }
+            });
+
+            // Cargar materias al iniciar
+            await cargarMaterias();
+        });
+    </script>
+</body>
+</html>

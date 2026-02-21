@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gestión de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-container">
+                    <div class="logo-utp">
+                        <span class="logo-u">U</span>
+                        <span class="logo-t">T</span>
+                        <span class="logo-p">P</span>
+                    </div>
+                </div>
+                <h1>Gestión de Tutorías</h1>
+                <p>Universidad Tecnológica De Pereira</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="correo">Correo Electrónico</label>
+                    <input type="email" id="correo" name="correo" value="admin@universidad.edu" required autocomplete="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contraseña">Contraseña</label>
+                    <input type="password" id="contraseña" name="contraseña" value="admin123" required autocomplete="current-password">
+                </div>
+                
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">
+                    Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Verificar si ya está autenticado
+        if (storage.isAuthenticated()) {
+            auth.redirectByRole();
+        }
+
+        // Manejar login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const correo = document.getElementById('correo').value;
+            const contraseña = document.getElementById('contraseña').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Validar email
+            if (!utils.validateEmail(correo)) {
+                errorMessage.textContent = 'Por favor ingrese un correo electrónico válido';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Deshabilitar botón y mostrar loading
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Iniciando sesión...';
+            errorMessage.style.display = 'none';
+            
+            try {
+                await auth.login(correo, contraseña);
+                utils.showSuccess('Inicio de sesión exitoso');
+                setTimeout(() => {
+                    auth.redirectByRole();
+                }, 500);
+            } catch (error) {
+                let errorMsg = 'Error al iniciar sesión. Verifique sus credenciales.';
+                
+                if (error.message) {
+                    errorMsg = error.message;
+                } else if (error.data && error.data.message) {
+                    errorMsg = error.data.message;
+                } else if (error.status === 401) {
+                    errorMsg = 'Credenciales inválidas. Verifique su correo y contraseña.';
+                } else if (error.status === 0) {
+                    errorMsg = 'Error de conexión. Verifique que el servidor esté ejecutándose.';
+                }
+                
+                errorMessage.textContent = errorMsg;
+                errorMessage.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Iniciar Sesión';
+            }
+        });
+    </script>
+</body>
+</html>
