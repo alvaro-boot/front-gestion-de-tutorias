@@ -1,5 +1,6 @@
 // Configuración de la API
-const API_BASE_URL = 'http://localhost:3000/api';
+//const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://back-gestion-tutorias.onrender.com';
 
 // Función genérica para hacer requests
 async function apiRequest(endpoint, options = {}) {
